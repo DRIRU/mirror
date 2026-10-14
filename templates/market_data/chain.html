@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}BTC Options Chain · CoinSwitch PRO{% endblock %}
+
+{% block header_metrics %}
+<div class="flex items-center space-x-6 border-r border-[#1F2937] pr-6">
+  <div>
+    <span class="text-[11px] text-gray-400 uppercase font-semibold">BTC Index</span>
+    <div class="text-sm md:text-base font-bold text-white tracking-tight">
+      {% if index_price > 0 %}${{ index_price|floatformat:1 }}{% else %}—{% endif %}
+    </div>
+  </div>
+  <div>
+    <span class="text-[11px] text-gray-400 uppercase font-semibold">Underlying BTC</span>
+    <div class="text-sm md:text-base font-bold text-cyan-300 tracking-tight">
+      {% if underlying_price > 0 %}${{ underlying_price|floatformat:1 }}{% elif mark_price > 0 %}${{ mark_price|floatformat:1 }}{% else %}—{% endif %}
+    </div>
+  </div>
+  <div>
+    <span class="text-[11px] text-gray-400 uppercase font-semibold">Put/Call Ratio</span>
+    <div class="text-sm md:text-base font-bold text-amber-400">
+      {{ matrix.pcr|default:"—" }}
+    </div>
+  </div>
+  <div>
+    <span class="text-[11px] text-gray-400 uppercase font-semibold">Contracts</span>
+    <div class="text-sm md:text-base font-bold text-gray-300">
+      {{ instruments_count }}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col space-y-2 flex-1 transition-all duration-200"
+     :class="selectedStrike ? 'lg:pr-[460px]' : ''"
+     @keydown.escape.window="selectedStrike = null"
+     x-data="{
+  activeExpiry: '{{ selected_expiry }}',
+  isZeroDte: {{ selected_expiry_info.is_zero_dte|yesno:'true,false' }},
+  showGreeks: true,
+  showIv: true,
+  showOi: true,
+  mobileMode: 'both', // 'both' | 'calls' | 'puts'
+  selectedStrike: null,
+  selectedSide: 'call',
+  isFetching: false
+}">
+
+  <!-- Mobile Ticker & Rapid Metrics Sub-Header (Institutional Stitch Design) -->
+  <div id="mobile-header-metrics" class="lg:hidden bg-[#0D1117] border border-[#1F2937] p-2.5 font-mono-numbers text-xs">
+    <div class="flex items-baseline justify-between">
+      <div class="flex items-baseline space-x-2">
+        <span class="text-base font-bold text-white tracking-tight">
+          {% if index_price > 0 %}${{ index_price|floatformat:1 }}{% else %}—{% endif %}
+        </span>
+        <span class="text-[11px] text-emerald-400 font-semibold">BTC Index</span>
+      </div>
+      <div class="flex items-center space-x-1.5 text-[11px]">
+        <span class="text-gray-400">Und:</span>
+        <span class="text-cyan-300 font-bold">{% if underlying_price > 0 %}${{ underlying_price|floatformat:1 }}{% elif mark_price > 0 %}${{ mark_price|floatformat:1 }}{% else %}—{% endif %}</span>
+      </div>
+    </div>
+    <div class="flex items-center justify-between mt-1 text-[11px] text-gray-300 pt-1 border-t border-[#1F2937]/60">
+      <div>PCR: <strong class="text-amber-400">{{ matrix.pcr|default:"—" }}</strong></div>
+      <div>Call OI: <strong class="text-emerald-400">{{ matrix.total_call_oi|floatformat:0 }}</strong></div>
+      <div>Put OI: <strong class="text-rose-400">{{ matrix.total_put_oi|floatformat:0 }}</strong></div>
+      <div>Contracts: <strong class="text-gray-100">{{ instruments_count }}</strong></div>
+    </div>
+  </div>
+
+  <!-- Expiry Tabs Ribbon (Smooth Swipe on Mobile) -->
+  <div class="bg-[#0D1117] border border-[#1F2937] px-3 md:px-4 py-2 flex items-center justify-between">
+    <!-- Scrollable Expiry Tabs -->
+    <div class="flex items-center space-x-2 overflow-x-auto custom-scroll-hidden py-1 flex-1 min-w-0 mr-2 md:mr-6 pr-2 md:pr-4">
+      <span class="text-xs text-gray-400 uppercase font-bold mr-1 md:mr-2 font-mono-numbers shrink-0">Expiry:</span>
+      {% for exp in expiries %}
+      <button hx-get="{% url 'chain_table' %}?expiry={{ exp.label }}&auto=1"
+              hx-target="#chain-table-container"
+              hx-swap="outerHTML"
+              hx-push-url="?expiry={{ exp.label }}"
+              @click="activeExpiry = '{{ exp.label }}'; isZeroDte = {{ exp.is_zero_dte|yesno:'true,false' }}; selectedStrike = null"
+              class="px-2.5 md:px-3.5 py-1 md:py-1.5 text-xs md:text-sm font-mono-numbers border transition-all flex items-center space-x-1.5 md:space-x-2 cursor-pointer shrink-0 whitespace-nowrap"
+              :class="activeExpiry === '{{ exp.label }}' 
+                ? 'bg-[#06B6D4]/15 border-[#06B6D4] text-[#06B6D4] font-bold shadow-[0_0_10px_rgba(6,182,212,0.25)]' 
+                : 'bg-[#131924] border-[#1F2937] text-gray-300 hover:text-white hover:border-gray-500'">
+        <span>{{ exp.label }}</span>
+        <span class="text-[10px] md:text-[11px]" 
+              :class="activeExpiry === '{{ exp.label }}' ? 'text-cyan-300 font-semibold' : 'text-gray-400'">
+          {{ exp.dte }}d
+        </span>
+      </button>
+      {% endfor %}
+    </div>
+
+    <!-- Right: Desktop Expiry Quick Stats Dock -->
+    <div id="desktop-expiry-stats" class="hidden lg:flex items-center space-x-6 text-xs font-mono-numbers text-gray-300 shrink-0 border-l border-[#1F2937] pl-6 bg-[#0D1117]">
+      <div class="flex items-center space-x-1.5">
+        <span class="text-gray-400">Call OI:</span>
+        <strong class="text-emerald-400 text-sm font-bold">{{ matrix.total_call_oi|floatformat:0 }}</strong>
+      </div>
+      <div class="flex items-center space-x-1.5">
+        <span class="text-gray-400">Put OI:</span>
+        <strong class="text-rose-400 text-sm font-bold">{{ matrix.total_put_oi|floatformat:0 }}</strong>
+      </div>
+      <div class="flex items-center space-x-1.5">
+        <span class="text-gray-400">PCR:</span>
+        <strong class="text-amber-400 text-sm font-bold">{{ matrix.pcr }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Segmented View Control: [Calls | Both | Puts] -->
+  <div class="lg:hidden flex items-center justify-between bg-[#0D1117] border border-[#1F2937] px-3 py-1.5">
+    <span class="text-[11px] uppercase font-bold text-gray-400 font-mono-numbers">View:</span>
+    <div class="inline-flex bg-[#131924] border border-[#1F2937] p-0.5 font-mono-numbers text-xs">
+      <button type="button" 
+              @click="mobileMode = 'calls'"
+              :class="mobileMode === 'calls' ? 'bg-[#06B6D4] text-[#080B10] font-bold shadow-sm' : 'text-gray-300 hover:text-white'"
+              class="px-3 py-1 transition-colors">
+        Calls
+      </button>
+      <button type="button" 
+              @click="mobileMode = 'both'"
+              :class="mobileMode === 'both' ? 'bg-[#06B6D4] text-[#080B10] font-bold shadow-sm' : 'text-gray-300 hover:text-white'"
+              class="px-3 py-1 transition-colors">
+        Both
+      </button>
+      <button type="button" 
+              @click="mobileMode = 'puts'"
+              :class="mobileMode === 'puts' ? 'bg-[#06B6D4] text-[#080B10] font-bold shadow-sm' : 'text-gray-300 hover:text-white'"
+              class="px-3 py-1 transition-colors">
+        Puts
+      </button>
+    </div>
+    <div class="text-[11px] text-gray-400 font-mono-numbers">
+      DTE: <span class="text-cyan-300 font-semibold">{{ selected_expiry_info.dte }}d</span>
+    </div>
+  </div>
+
+  <!-- 0-DTE Settlement Warning -->
+  <div x-show="isZeroDte" 
+       class="bg-amber-950/30 border border-amber-600/50 text-amber-300 text-xs md:text-sm px-3 md:px-4 py-2 flex items-center justify-between font-mono-numbers">
+    <div class="flex items-center space-x-2">
+      <span class="text-amber-400 text-lg">⚠️</span>
+      <span><strong>Settlement Day (0 DTE):</strong> Quoting is suspended by exchange during daily settlement.</span>
+    </div>
+  </div>
+
+  <!-- Controls & Action Toolbar -->
+  <div class="bg-[#0D1117] border border-[#1F2937] px-3 md:px-4 py-1.5 md:py-2 flex flex-wrap items-center justify-between gap-2 md:gap-3 text-xs md:text-sm">
+    
+    <!-- Left: Desktop Column Visibility Toggles -->
+    <div class="hidden lg:flex items-center space-x-5">
+      <span class="text-xs text-gray-400 uppercase font-bold">Columns:</span>
+      <label class="flex items-center space-x-2 cursor-pointer text-gray-200 hover:text-white">
+        <input type="checkbox" x-model="showGreeks" class="w-4 h-4 accent-[#06B6D4]">
+        <span>Greeks (Δ)</span>
+      </label>
+      <label class="flex items-center space-x-2 cursor-pointer text-gray-200 hover:text-white">
+        <input type="checkbox" x-model="showIv" class="w-4 h-4 accent-[#06B6D4]">
+        <span>IV %</span>
+      </label>
+      <label class="flex items-center space-x-2 cursor-pointer text-gray-200 hover:text-white">
+        <input type="checkbox" x-model="showOi" class="w-4 h-4 accent-[#06B6D4]">
+        <span>Open Interest</span>
+      </label>
+    </div>
+
+    <!-- Mobile Prompt Hint -->
+    <div class="lg:hidden text-[11px] text-gray-400 flex items-center space-x-1">
+      <span class="text-cyan-400">💡</span>
+      <span>Tap any strike row to inspect Greeks & details</span>
+    </div>
+
+    <!-- Right: Quote Fetcher & Controls -->
+    <div class="flex items-center space-x-2 md:space-x-3 ml-auto">
+      <form hx-post="{% url 'fetch_quotes' %}" 
+            hx-target="#chain-table-container" 
+            hx-swap="outerHTML"
+            @submit="isFetching = true"
+            hx-on::after-request="isFetching = false"
+            class="flex items-center space-x-1.5 md:space-x-2">
+        <input type="hidden" name="expiry" :value="activeExpiry">
+        <div class="hidden sm:flex items-center space-x-1 text-xs text-gray-300 font-mono-numbers">
+          <span>Workers:</span>
+          <select name="workers" class="bg-[#131924] border border-[#1F2937] text-gray-100 px-1.5 py-0.5 text-xs font-semibold">
+            <option value="5">5</option>
+            <option value="8" selected>8</option>
+            <option value="12">12</option>
+          </select>
+        </div>
+        <button type="submit" 
+                class="btn-terminal btn-primary flex items-center space-x-1 py-1 px-2.5 text-xs font-semibold"
+                :disabled="isFetching">
+          <span x-show="!isFetching">↻ Fetch Quotes</span>
+          <span x-show="isFetching" class="animate-pulse">⟳ Fetching…</span>
+        </button>
+      </form>
+
+      <!-- Refresh Instruments Button -->
+      <button hx-post="{% url 'refresh_instruments' %}"
+              hx-swap="none"
+              hx-on::after-request="window.location.reload()"
+              class="btn-terminal hidden sm:flex items-center space-x-1 py-1 px-2.5 text-xs">
+        <span>🔄 Instruments</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Options Chain Matrix Container -->
+  <div class="bg-[#0D1117] border border-[#1F2937] flex-1">
+    {% include "market_data/partials/chain_table.html" %}
+  </div>
+
+  <!-- Mobile Backdrop Overlay when Drawer is Open (Mobile Only) -->
+  <div x-show="selectedStrike" 
+       @click="selectedStrike = null" 
+       class="lg:hidden fixed inset-0 bg-black/75 backdrop-blur-xs z-40 transition-opacity" 
+       x-transition.opacity></div>
+
+  <!-- Responsive Contract Inspector:
+       Mobile (< lg): Slide-Up Bottom Sheet
+       Desktop (>= lg): Dedicated Right-Hand Side Inspector Panel
+  -->
+  <div x-show="selectedStrike" 
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-full lg:translate-y-0 lg:translate-x-full"
+       x-transition:enter-end="opacity-100 translate-y-0 lg:translate-x-0"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100 translate-y-0 lg:translate-x-0"
+       x-transition:leave-end="opacity-0 translate-y-full lg:translate-y-0 lg:translate-x-full"
+       class="fixed z-50 bg-[#0D1117] flex flex-col overflow-hidden mobile-sheet-enter
+              /* Mobile: Slide-Up Bottom Sheet */
+              inset-x-0 bottom-0 max-h-[85vh] border-t-2 border-[#06B6D4] shadow-2xl pb-safe
+              /* Desktop: Sleek Right-Hand Side Docked Panel */
+              lg:inset-auto lg:top-[43px] lg:right-0 lg:bottom-0 lg:w-[460px] lg:max-h-none lg:border-t-0 lg:border-l-2 lg:border-[#06B6D4] lg:shadow-[-12px_0_30px_rgba(0,0,0,0.85)]">
+    
+    <!-- Mobile Drag Handle Bar -->
+    <div class="lg:hidden pt-2 pb-1 flex justify-center cursor-pointer" @click="selectedStrike = null">
+      <div class="w-10 h-1 bg-gray-600 rounded-full"></div>
+    </div>
+
+    <!-- Drawer Header -->
+    <div class="bg-[#131924] border-b border-[#1F2937] px-3.5 py-2.5 flex items-center justify-between text-xs md:text-sm shrink-0">
+      <div class="flex items-center space-x-2.5">
+        <span class="text-gray-400 font-medium">Selected Strike:</span>
+        <span class="text-white font-mono-numbers text-base font-bold" x-text="'$' + selectedStrike"></span>
+        <span class="text-[11px] px-2 py-0.5 font-bold uppercase rounded-xs"
+              :class="selectedSide === 'call' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'"
+              x-text="selectedSide ? selectedSide.toUpperCase() : 'OPTION'"></span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button @click="selectedStrike = null" class="text-gray-400 hover:text-white text-xs px-2.5 py-1 bg-[#1F2937] hover:bg-gray-700 transition-colors cursor-pointer">✕ Close</button>
+      </div>
+    </div>
+
+    <!-- Content Slot loaded via HTMX (Smoothly scrollable) -->
+    <div class="p-3 overflow-y-auto flex-1 custom-scroll" id="contract-drawer-content">
+      <div class="text-xs text-gray-400 py-8 text-center flex items-center justify-center space-x-2">
+        <svg class="animate-spin h-4 w-4 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        <span>Loading strike details & Greeks...</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

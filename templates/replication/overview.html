@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Trade Mirror & Replication · CoinSwitch PRO{% endblock %}
+
+{% block content %}
+<div class="space-y-4 max-w-6xl mx-auto w-full py-2">
+  
+  <!-- Safety Banner -->
+  <div class="bg-amber-950/20 border border-amber-500/40 p-4 text-xs">
+    <div class="flex items-center space-x-3">
+      <span class="text-2xl text-amber-400">🛡️</span>
+      <div>
+        <h2 class="text-sm font-bold text-amber-300">Safety Status: Execution Routes Unwired</h2>
+        <p class="text-gray-400 mt-0.5">
+          The Trade Mirror engine and position sizing models are fully coded in <code>apps.replication</code>, but are strictly <strong>unwired from live exchange POST endpoints</strong>. Orders created here operate in dry-run and simulation mode only.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sizing Rule Formula Card -->
+  <div class="terminal-panel p-4">
+    <div class="flex items-center justify-between border-b border-[#1F2937] pb-2 mb-3">
+      <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Capital-Aware Replication Formula</h3>
+      <span class="text-[10px] bg-[#131924] text-gray-400 px-2 py-0.5 border border-[#1F2937]">Milestone 2 Specification</span>
+    </div>
+    <div class="text-xs text-gray-300 space-y-2 font-mono-numbers">
+      <p>Follower contracts are calculated automatically based on each account's equity proportion:</p>
+      <div class="bg-[#080B10] border border-[#1F2937] p-3 text-cyan-300 text-xs">
+        Follower Qty = Master Qty × (Follower Equity / Master Equity) × Allocation Ratio<br>
+        <span class="text-gray-500 text-[11px]">* Rounded down to instrument's qtyStep (0.01 BTC) and capped at max_contract_qty.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Configured Accounts Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <!-- Master Account Card -->
+    <div class="terminal-panel p-4">
+      <div class="flex items-center justify-between border-b border-[#1F2937] pb-2 mb-3">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+          <h3 class="text-xs font-bold text-white uppercase">Master Account</h3>
+        </div>
+        <a href="/admin/replication/masteraccount/" target="_blank" class="text-[10px] text-cyan-400 hover:underline">Edit in Admin ↗</a>
+      </div>
+      {% for master in masters %}
+      <div class="bg-[#131924] p-3 border border-[#1F2937] space-y-1.5 text-xs font-mono-numbers">
+        <div class="flex justify-between"><span class="text-gray-400">Label:</span> <span class="text-white font-bold">{{ master.label }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">Currency:</span> <span class="text-gray-200">{{ master.base_currency }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">Key:</span> <span class="text-gray-400">{{ master.api_key|truncatechars:16 }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">Followers:</span> <span class="text-emerald-400 font-bold">{{ master.followers.count }}</span></div>
+      </div>
+      {% empty %}
+      <div class="text-xs text-gray-500 py-4 text-center">
+        No master accounts configured yet. Add one in <a href="/admin/replication/masteraccount/add/" class="text-cyan-400 underline">Django Admin</a>.
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Follower Accounts Card -->
+    <div class="terminal-panel p-4">
+      <div class="flex items-center justify-between border-b border-[#1F2937] pb-2 mb-3">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <h3 class="text-xs font-bold text-white uppercase">Follower Accounts (Max 3)</h3>
+        </div>
+        <a href="/admin/replication/followeraccount/" target="_blank" class="text-[10px] text-cyan-400 hover:underline">Add Follower ↗</a>
+      </div>
+      <div class="space-y-2">
+        {% for master in masters %}
+          {% for follower in master.followers.all %}
+          <div class="bg-[#131924] p-2.5 border border-[#1F2937] flex items-center justify-between text-xs font-mono-numbers">
+            <div>
+              <div class="text-white font-bold">{{ follower.name }}</div>
+              <div class="text-[10px] text-gray-400">Ratio: {{ follower.allocation_ratio }}x · Max Cap: {{ follower.max_contract_qty }}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-emerald-400 font-bold">${{ follower.equity_balance }}</div>
+              <div class="text-[9px] text-gray-500">Allocated Equity</div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-xs text-gray-500 py-4 text-center">
+            No follower accounts added yet.
+          </div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Replicated Orders Audit Log -->
+  <div class="terminal-panel p-4">
+    <div class="flex items-center justify-between border-b border-[#1F2937] pb-2 mb-3">
+      <h3 class="text-xs font-bold text-white uppercase tracking-wider">Simulated Replication Audit Log</h3>
+      <span class="text-[10px] text-gray-500 font-mono-numbers">Last 30 Records</span>
+    </div>
+    <div class="overflow-x-auto font-mono-numbers text-xs">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="text-gray-500 border-b border-[#1F2937] text-[10px]">
+            <th class="py-1">Order Link ID</th>
+            <th class="py-1">Symbol</th>
+            <th class="py-1">Side</th>
+            <th class="py-1">Master Qty</th>
+            <th class="py-1">Follower</th>
+            <th class="py-1">Follower Qty</th>
+            <th class="py-1">Status</th>
+            <th class="py-1">Timestamp</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#1F2937]">
+          {% for order in recent_orders %}
+          <tr class="text-gray-300 hover:bg-[#131924]">
+            <td class="py-1.5 text-cyan-400">{{ order.order_link_id }}</td>
+            <td class="py-1.5 font-bold">{{ order.symbol }}</td>
+            <td class="py-1.5 {% if order.side == 'Buy' %}text-emerald-400{% else %}text-rose-400{% endif %}">{{ order.side }}</td>
+            <td class="py-1.5">{{ order.master_qty }}</td>
+            <td class="py-1.5 text-white">{{ order.follower.name }}</td>
+            <td class="py-1.5 text-emerald-400 font-bold">{{ order.follower_qty }}</td>
+            <td class="py-1.5"><span class="badge-atm">{{ order.status }}</span></td>
+            <td class="py-1.5 text-gray-500 text-[10px]">{{ order.created_at|date:"H:i:s" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-6 text-gray-500">
+              No replicated orders logged yet.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+

@@ -1,0 +1,208 @@
+/* Google Stitch: Obsidian Precision Terminal CSS Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-canvas: #080B10;
+  --surface-1: #0D1117;
+  --surface-2: #131924;
+  --surface-3: #1A2232;
+  --border-hairline: #1F2937;
+  --border-active: #2D3748;
+  --border-accent: #06B6D4;
+  
+  --color-green: #10B981;
+  --color-red: #EF4444;
+  --color-amber: #F59E0B;
+  --color-cyan: #06B6D4;
+  --color-blue: #3B82F6;
+  --color-muted: #64748B;
+  --color-text: #DFE2EB;
+  --color-text-dim: #94A3B8;
+}
+
+body {
+  background-color: var(--bg-canvas);
+  color: var(--color-text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-mono-numbers {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-hairline);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-active);
+}
+
+/* Sharp Terminal Panels */
+.terminal-panel {
+  background-color: var(--surface-1);
+  border: 1px solid var(--border-hairline);
+  border-radius: 0px;
+}
+
+.terminal-header {
+  background-color: var(--surface-2);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+/* Options Table Styles - Readable High-Density Scale */
+.option-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.option-table th {
+  padding: 8px 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: #94A3B8;
+  border-bottom: 1px solid var(--border-hairline);
+  background: #0A0E14;
+}
+
+.option-table td {
+  padding: 6px 10px;
+  height: 30px;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.5);
+}
+
+.option-table tr:hover td {
+  background-color: rgba(19, 25, 36, 0.95) !important;
+}
+
+/* Moneyness Tints */
+.call-itm {
+  background-color: rgba(16, 185, 129, 0.08);
+}
+.put-itm {
+  background-color: rgba(239, 68, 68, 0.08);
+}
+.atm-row {
+  border-top: 1.5px solid var(--color-amber) !important;
+  border-bottom: 1.5px solid var(--color-amber) !important;
+  background-color: rgba(245, 158, 11, 0.12) !important;
+}
+
+/* Strike Center Cell */
+.strike-col {
+  border-left: 1.5px solid var(--border-hairline);
+  border-right: 1.5px solid var(--border-hairline);
+  background-color: #0A0E14;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Badges */
+.badge-itm {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--color-green);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 2px;
+}
+.badge-otm {
+  background: rgba(100, 116, 139, 0.2);
+  color: var(--color-muted);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 2px;
+}
+.badge-atm {
+  background: rgba(245, 158, 11, 0.25);
+  color: var(--color-amber);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 2px;
+}
+
+/* Buttons */
+.btn-terminal {
+  background-color: var(--surface-2);
+  color: var(--color-text);
+  border: 1px solid var(--border-hairline);
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 0px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+.btn-terminal:hover {
+  background-color: var(--surface-3);
+  border-color: var(--border-accent);
+}
+.btn-primary {
+  background-color: var(--color-cyan);
+  color: #080B10;
+  border-color: var(--color-cyan);
+}
+.btn-primary:hover {
+  background-color: #22d3ee;
+}
+
+/* Mobile Terminal & Touch Enhancements */
+.custom-scroll-hidden::-webkit-scrollbar {
+  display: none;
+}
+.custom-scroll-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.strike-selected-glow {
+  box-shadow: inset 0 0 0 1px #06B6D4, 0 0 10px rgba(6, 182, 212, 0.25);
+}
+
+.atm-pulse-dot {
+  box-shadow: 0 0 8px #F59E0B;
+}
+
+@keyframes slideUpSheet {
+  from {
+    transform: translateY(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.mobile-sheet-enter {
+  animation: slideUpSheet 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.touch-tap-none {
+  -webkit-tap-highlight-color: transparent;
+}
+

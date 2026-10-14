@@ -1,0 +1,453 @@
+<!-- Canonical Options Chain Matrix Table Partial (Large Readable Scale) -->
+<div class="overflow-x-auto select-none" id="chain-table-container">
+  
+  {% if batch_summary %}
+  <div class="bg-cyan-950/40 border border-cyan-800 text-cyan-200 text-xs md:text-sm px-4 py-2 mb-2 flex items-center justify-between font-mono-numbers">
+    <div>
+      ✓ Loaded <strong>{{ batch_summary.fetched }}</strong> / {{ batch_summary.total }} quotes 
+      {% if batch_summary.failed > 0 %}<span class="text-rose-400">({{ batch_summary.failed }} failed)</span>{% endif %}
+      in <strong class="text-white">{{ batch_summary.elapsed_s }}s</strong>
+    </div>
+    <div class="text-xs text-gray-400">{{ batch_summary.finished_at }}</div>
+  </div>
+  {% elif matrix.fetched_count == 0 and matrix.rows %}
+  <!-- Automatic Lazy Loader: Fires seamlessly when expiry is selected -->
+  <div hx-get="{% url 'fetch_quotes' %}?expiry={{ selected_expiry }}&workers=8"
+       hx-trigger="load"
+       hx-target="#chain-table-container"
+       hx-swap="outerHTML">
+    <div class="p-3 text-center text-cyan-300 text-xs md:text-sm font-semibold bg-[#131924] border border-cyan-800/40 my-2 animate-pulse font-mono-numbers flex items-center justify-center space-x-2">
+      <span class="inline-block animate-spin">⟳</span>
+      <span>Lazy-loading live quotes for <strong>{{ selected_expiry }}</strong> ({{ matrix.total_contracts }} contracts)…</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- DESKTOP MATRIX TABLE (Visible on Desktop lg:) -->
+  <div class="hidden lg:block overflow-x-auto select-none">
+    <table class="option-table font-mono-numbers text-center">
+      <thead>
+        <tr class="bg-[#131924] text-gray-200">
+          <th colspan="8" class="text-center border-r border-[#1F2937] text-emerald-400 py-2.5 text-xs md:text-sm tracking-wide">
+            CALLS (Long Volatility / Bullish)
+          </th>
+          <th class="text-center strike-col text-white py-2.5 text-xs md:text-sm" style="width: 150px;">
+            STRIKE
+          </th>
+          <th colspan="8" class="text-center border-l border-[#1F2937] text-rose-400 py-2.5 text-xs md:text-sm tracking-wide">
+            PUTS (Downside Hedge / Bearish)
+          </th>
+        </tr>
+        <tr class="bg-[#0A0E14] text-xs text-gray-300">
+          <!-- Calls Side Headers -->
+          <th x-show="showGreeks" class="text-right">Delta</th>
+          <th x-show="showIv" class="text-right">IV</th>
+          <th x-show="showOi" class="text-right">OI</th>
+          <th class="text-right text-emerald-400">Bid Sz</th>
+          <th class="text-right text-emerald-400">Bid</th>
+          <th class="text-right text-rose-400">Ask</th>
+          <th class="text-right text-rose-400">Ask Sz</th>
+          <th class="text-right text-gray-200">Last</th>
+
+          <!-- Center Strike Header -->
+          <th class="strike-col text-white">Strike</th>
+
+          <!-- Puts Side Headers -->
+          <th class="text-right text-emerald-400">Bid Sz</th>
+          <th class="text-right text-emerald-400">Bid</th>
+          <th class="text-right text-rose-400">Ask</th>
+          <th class="text-right text-rose-400">Ask Sz</th>
+          <th class="text-right text-gray-200">Last</th>
+          <th x-show="showOi" class="text-right">OI</th>
+          <th x-show="showIv" class="text-right">IV</th>
+          <th x-show="showGreeks" class="text-right">Delta</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in matrix.rows %}
+        <tr class="{% if row.is_atm %}atm-row{% endif %} transition-colors">
+          
+          <!-- CALLS DATA (Touching Call Columns loads Call contract only) -->
+          <td x-show="showGreeks" class="text-right text-gray-300 cursor-pointer hover:bg-emerald-950/40 {% if row.call.is_itm %}call-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.call.symbol }}&side=call&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'call'">
+            {% if row.call.delta is not None %}{{ row.call.delta|floatformat:3 }}{% else %}<span class="text-gray-600">—</span>{% endif %}
+          </td>
+          <td x-show="showIv" class="text-right text-amber-300 cursor-pointer hover:bg-emerald-950/40 {% if row.call.is_itm %}call-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.call.symbol }}&side=call&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'call'">
+            {% if row.call.iv is not None %}{{ row.call.iv|floatformat:1 }}%{% else %}<span class="text-gray-600">—</span>{% endif %}
+          </td>
+          <td x-show="showOi" class="text-right text-blue-400 cursor-pointer hover:bg-emerald-950/40 {% if row.call.is_itm %}call-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.call.symbol }}&side=call&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'call'">
+            {% if row.call.oi is not None %}{{ row.call.oi|floatformat:1 }}{% else %}<span class="text-gray-600">—</span>{% endif %}
+          </td>
+          <td class="text-right text-emerald-500 cursor-pointer hover:bg-emerald-950/40 {% if row.call.is_itm %}call-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.call.symbol }}&side=call&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'call'">
+            {% if row.call.bid_size is not None %}{{ row.call.bid_size|floatformat:2 }}{% else %}<span class="text-gray-600">—</span>{% endif %}
+          </td>
+          <td class="text-right font-bold text-emerald-400 text-sm cursor-pointer hover:bg-emerald-950/40 {% if row.call.is_itm %}call-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.call.symbol }}&side=call&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'call'">
+            {% if row.call.bid is not None %}
+              {% if row.call.bid == 0 %}<span class="text-gray-500 text-xs font-normal">0 ⚠</span>{% else %}{{ row.call.bid|floatformat:0 }}{% endif %}
+            {% else %}<span class="text-gray-600 font-normal">—</span>{% endif %}
+          </td>
+          <td class="text-right font-bold text-rose-400 text-sm cursor-pointer hover:bg-emerald-950/40 {% if row.call.is_itm %}call-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.call.symbol }}&side=call&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'call'">
+            {% if row.call.ask is not None %}{{ row.call.ask|floatformat:0 }}{% else %}<span class="text-gray-600 font-normal">—</span>{% endif %}
+          </td>
+          <td class="text-right text-rose-500 cursor-pointer hover:bg-emerald-950/40 {% if row.call.is_itm %}call-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.call.symbol }}&side=call&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'call'">
+            {% if row.call.ask_size is not None %}{{ row.call.ask_size|floatformat:2 }}{% else %}<span class="text-gray-600">—</span>{% endif %}
+          </td>
+          <td class="text-right text-gray-200 cursor-pointer hover:bg-emerald-950/40 {% if row.call.is_itm %}call-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.call.symbol }}&side=call&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'call'">
+            {% if row.call.last is not None %}{{ row.call.last|floatformat:0 }}{% else %}<span class="text-gray-600">—</span>{% endif %}
+          </td>
+
+          <!-- STRIKE CENTER COLUMN (Defaults to Call) -->
+          <td class="strike-col text-white cursor-pointer hover:bg-[#131924]"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.call.symbol }}&side=call&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'call'">
+            <div class="flex items-center justify-between px-2.5">
+              <span class="{% if row.is_atm %}text-amber-400 font-bold{% else %}text-white font-semibold{% endif %}">
+                {{ row.strike_label }}
+              </span>
+              <span class="{% if row.is_atm %}badge-atm{% elif row.moneyness == 'ITM' %}badge-itm{% else %}badge-otm{% endif %}">
+                {{ row.moneyness }}
+              </span>
+            </div>
+          </td>
+
+          <!-- PUTS DATA (Touching Put Columns loads Put contract only) -->
+          <td class="text-right text-emerald-500 cursor-pointer hover:bg-rose-950/40 {% if row.put.is_itm %}put-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.put.symbol }}&side=put&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'put'">
+            {% if row.put.bid_size is not None %}{{ row.put.bid_size|floatformat:2 }}{% else %}<span class="text-gray-600">—</span>{% endif %}
+          </td>
+          <td class="text-right font-bold text-emerald-400 text-sm cursor-pointer hover:bg-rose-950/40 {% if row.put.is_itm %}put-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.put.symbol }}&side=put&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'put'">
+            {% if row.put.bid is not None %}
+              {% if row.put.bid == 0 %}<span class="text-gray-500 text-xs font-normal">0 ⚠</span>{% else %}{{ row.put.bid|floatformat:0 }}{% endif %}
+            {% else %}<span class="text-gray-600 font-normal">—</span>{% endif %}
+          </td>
+          <td class="text-right font-bold text-rose-400 text-sm cursor-pointer hover:bg-rose-950/40 {% if row.put.is_itm %}put-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.put.symbol }}&side=put&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'put'">
+            {% if row.put.ask is not None %}{{ row.put.ask|floatformat:0 }}{% else %}<span class="text-gray-600 font-normal">—</span>{% endif %}
+          </td>
+          <td class="text-right text-rose-500 cursor-pointer hover:bg-rose-950/40 {% if row.put.is_itm %}put-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.put.symbol }}&side=put&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'put'">
+            {% if row.put.ask_size is not None %}{{ row.put.ask_size|floatformat:2 }}{% else %}<span class="text-gray-600">—</span>{% endif %}
+          </td>
+          <td class="text-right text-gray-200 cursor-pointer hover:bg-rose-950/40 {% if row.put.is_itm %}put-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.put.symbol }}&side=put&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'put'">
+            {% if row.put.last is not None %}{{ row.put.last|floatformat:0 }}{% else %}<span class="text-gray-600">—</span>{% endif %}
+          </td>
+          <td x-show="showOi" class="text-right text-blue-400 cursor-pointer hover:bg-rose-950/40 {% if row.put.is_itm %}put-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.put.symbol }}&side=put&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'put'">
+            {% if row.put.oi is not None %}{{ row.put.oi|floatformat:1 }}{% else %}<span class="text-gray-600">—</span>{% endif %}
+          </td>
+          <td x-show="showIv" class="text-right text-amber-300 cursor-pointer hover:bg-rose-950/40 {% if row.put.is_itm %}put-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.put.symbol }}&side=put&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'put'">
+            {% if row.put.iv is not None %}{{ row.put.iv|floatformat:1 }}%{% else %}<span class="text-gray-600">—</span>{% endif %}
+          </td>
+          <td x-show="showGreeks" class="text-right text-gray-300 cursor-pointer hover:bg-rose-950/40 {% if row.put.is_itm %}put-itm{% endif %}"
+              hx-get="{% url 'contract_drawer' %}?symbol={{ row.put.symbol }}&side=put&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+              hx-target="#contract-drawer-content" hx-swap="innerHTML"
+              @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'put'">
+            {% if row.put.delta is not None %}{{ row.put.delta|floatformat:3 }}{% else %}<span class="text-gray-600">—</span>{% endif %}
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="17" class="text-center py-10 text-gray-400 text-sm">
+            No active option strikes found for expiry <strong>{{ selected_expiry }}</strong>.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- MOBILE STRIKE MATRIX (Google Stitch High-Density Architecture: Visible on lg:hidden) -->
+  <div class="block lg:hidden select-none font-mono-numbers">
+    
+    <!-- MODE 1: DUAL 'BOTH' MODE (Calls Bid/Ask | Strike | Puts Bid/Ask) -->
+    <div x-show="mobileMode === 'both'">
+      <!-- Table Header -->
+      <div class="grid grid-cols-12 bg-[#131924] border-b border-[#1F2937] py-2 text-[11px] font-bold text-gray-400">
+        <div class="col-span-5 grid grid-cols-2 px-2 text-left">
+          <span class="text-emerald-400">C. BID</span>
+          <span class="text-right text-rose-400">C. ASK</span>
+        </div>
+        <div class="col-span-2 text-center text-white bg-[#0A0E14] border-x border-[#1F2937]">
+          STRIKE
+        </div>
+        <div class="col-span-5 grid grid-cols-2 px-2 text-right">
+          <span class="text-left text-emerald-400">P. BID</span>
+          <span class="text-rose-400">P. ASK</span>
+        </div>
+      </div>
+
+      <!-- Strike Rows with Independent Side Touching -->
+      <div class="divide-y divide-[#1F2937]/40 bg-[#080B10]">
+        {% for row in matrix.rows %}
+          
+          <!-- Optional ATM Boundary Banner Row -->
+          {% if row.is_atm %}
+          <div class="bg-amber-950/40 border-y border-amber-500/80 px-2.5 py-1 text-[11px] text-amber-300 flex items-center justify-between font-bold">
+            <span class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+              <span>ATM BOUNDARY • SPOT</span>
+            </span>
+            <span class="text-white">${{ index_price|floatformat:1 }}</span>
+          </div>
+          {% endif %}
+
+          <div class="grid grid-cols-12 items-center min-h-[42px] {% if row.is_atm %}bg-amber-500/10{% endif %}">
+            
+            <!-- Call Bid & Ask (Touch Call Side -> loads Call only) -->
+            <div class="col-span-5 grid grid-cols-2 px-2.5 py-2.5 text-xs cursor-pointer transition-colors active:bg-emerald-950/70 hover:bg-emerald-950/30 {% if row.call.is_itm %}bg-emerald-950/20 text-emerald-300 font-semibold{% else %}text-gray-300{% endif %}"
+                 :class="(selectedStrike === '{{ row.strike_label }}' && selectedSide === 'call') ? 'ring-1 ring-[#10B981] bg-emerald-950/50' : ''"
+                 hx-get="{% url 'contract_drawer' %}?symbol={{ row.call.symbol }}&side=call&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+                 hx-target="#contract-drawer-content"
+                 hx-swap="innerHTML"
+                 @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'call'">
+              <span class="font-bold text-emerald-400">
+                {% if row.call.bid is not None and row.call.bid > 0 %}{{ row.call.bid|floatformat:0 }}{% else %}—{% endif %}
+              </span>
+              <span class="text-right font-medium text-rose-400">
+                {% if row.call.ask is not None and row.call.ask > 0 %}{{ row.call.ask|floatformat:0 }}{% else %}—{% endif %}
+              </span>
+            </div>
+
+            <!-- Center Strike (Touch Strike -> loads Call side by default) -->
+            <div class="col-span-2 text-center py-2.5 text-xs font-bold bg-[#0A0E14] border-x border-[#1F2937] cursor-pointer hover:bg-[#131924] active:bg-[#1A2232] {% if row.is_atm %}text-amber-400{% else %}text-white{% endif %}"
+                 :class="selectedStrike === '{{ row.strike_label }}' ? 'text-cyan-300' : ''"
+                 hx-get="{% url 'contract_drawer' %}?symbol={{ row.call.symbol }}&side=call&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+                 hx-target="#contract-drawer-content"
+                 hx-swap="innerHTML"
+                 @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'call'">
+              {{ row.strike_label }}
+            </div>
+
+            <!-- Put Bid & Ask (Touch Put Side -> loads Put only) -->
+            <div class="col-span-5 grid grid-cols-2 px-2.5 py-2.5 text-xs cursor-pointer transition-colors active:bg-rose-950/70 hover:bg-rose-950/30 {% if row.put.is_itm %}bg-rose-950/20 text-rose-300 font-semibold{% else %}text-gray-300{% endif %}"
+                 :class="(selectedStrike === '{{ row.strike_label }}' && selectedSide === 'put') ? 'ring-1 ring-[#EF4444] bg-rose-950/50' : ''"
+                 hx-get="{% url 'contract_drawer' %}?symbol={{ row.put.symbol }}&side=put&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+                 hx-target="#contract-drawer-content"
+                 hx-swap="innerHTML"
+                 @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'put'">
+              <span class="text-left font-medium text-emerald-400">
+                {% if row.put.bid is not None and row.put.bid > 0 %}{{ row.put.bid|floatformat:0 }}{% else %}—{% endif %}
+              </span>
+              <span class="text-right font-bold text-rose-400">
+                {% if row.put.ask is not None and row.put.ask > 0 %}{{ row.put.ask|floatformat:0 }}{% else %}—{% endif %}
+              </span>
+            </div>
+          </div>
+        {% empty %}
+          <div class="text-center py-8 text-gray-400 text-xs">No option strikes found.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- MODE 2: SINGLE-SIDED 'CALLS' MODE (Strike | Bid | Ask | IV | Delta | OI) -->
+    <div x-show="mobileMode === 'calls'">
+      <!-- Table Header -->
+      <div class="grid grid-cols-6 bg-[#131924] border-b border-[#1F2937] py-2 px-2 text-[11px] font-bold text-gray-400 text-center">
+        <div class="text-left text-white">STRIKE</div>
+        <div class="text-right text-emerald-400">BID</div>
+        <div class="text-right text-rose-400">ASK</div>
+        <div class="text-right text-amber-300">IV%</div>
+        <div class="text-right text-gray-300">DELTA</div>
+        <div class="text-right text-blue-400">OI</div>
+      </div>
+
+      <!-- Strike Rows -->
+      <div class="divide-y divide-[#1F2937]/40 bg-[#080B10]">
+        {% for row in matrix.rows %}
+          <div class="grid grid-cols-6 items-center min-h-[42px] px-2 text-xs cursor-pointer transition-colors active:bg-emerald-950/50 hover:bg-white/[0.03] {% if row.call.is_itm %}bg-emerald-950/15{% endif %}"
+               :class="(selectedStrike === '{{ row.strike_label }}' && selectedSide === 'call') ? 'ring-1 ring-cyan-400 bg-cyan-950/25' : ''"
+               hx-get="{% url 'contract_drawer' %}?symbol={{ row.call.symbol }}&side=call&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+               hx-target="#contract-drawer-content"
+               hx-swap="innerHTML"
+               @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'call'">
+            
+            <div class="text-left font-bold {% if row.is_atm %}text-amber-400{% else %}text-white{% endif %}">
+              {{ row.strike_label }}
+              <span class="text-[9px] px-1 py-0.2 {% if row.call.is_itm %}bg-emerald-900 text-emerald-300{% else %}bg-gray-800 text-gray-400{% endif %}">
+                {% if row.is_atm %}ATM{% elif row.call.is_itm %}ITM{% else %}OTM{% endif %}
+              </span>
+            </div>
+            <div class="text-right font-bold text-emerald-400">
+              {% if row.call.bid is not None and row.call.bid > 0 %}{{ row.call.bid|floatformat:0 }}{% else %}—{% endif %}
+            </div>
+            <div class="text-right font-bold text-rose-400">
+              {% if row.call.ask is not None and row.call.ask > 0 %}{{ row.call.ask|floatformat:0 }}{% else %}—{% endif %}
+            </div>
+            <div class="text-right text-amber-300">
+              {% if row.call.iv is not None %}{{ row.call.iv|floatformat:0 }}%{% else %}—{% endif %}
+            </div>
+            <div class="text-right text-gray-300">
+              {% if row.call.delta is not None %}{{ row.call.delta|floatformat:2 }}{% else %}—{% endif %}
+            </div>
+            <div class="text-right text-blue-400">
+              {% if row.call.oi is not None %}{{ row.call.oi|floatformat:0 }}{% else %}—{% endif %}
+            </div>
+          </div>
+        {% empty %}
+          <div class="text-center py-8 text-gray-400 text-xs">No option strikes found.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- MODE 3: SINGLE-SIDED 'PUTS' MODE (Strike | Bid | Ask | IV | Delta | OI) -->
+    <div x-show="mobileMode === 'puts'">
+      <!-- Table Header -->
+      <div class="grid grid-cols-6 bg-[#131924] border-b border-[#1F2937] py-2 px-2 text-[11px] font-bold text-gray-400 text-center">
+        <div class="text-left text-white">STRIKE</div>
+        <div class="text-right text-emerald-400">BID</div>
+        <div class="text-right text-rose-400">ASK</div>
+        <div class="text-right text-amber-300">IV%</div>
+        <div class="text-right text-gray-300">DELTA</div>
+        <div class="text-right text-blue-400">OI</div>
+      </div>
+
+      <!-- Strike Rows -->
+      <div class="divide-y divide-[#1F2937]/40 bg-[#080B10]">
+        {% for row in matrix.rows %}
+          <div class="grid grid-cols-6 items-center min-h-[42px] px-2 text-xs cursor-pointer transition-colors active:bg-rose-950/50 hover:bg-white/[0.03] {% if row.put.is_itm %}bg-rose-950/15{% endif %}"
+               :class="(selectedStrike === '{{ row.strike_label }}' && selectedSide === 'put') ? 'ring-1 ring-rose-400 bg-rose-950/25' : ''"
+               hx-get="{% url 'contract_drawer' %}?symbol={{ row.put.symbol }}&side=put&strike={{ row.strike_label }}&call={{ row.call.symbol }}&put={{ row.put.symbol }}"
+               hx-target="#contract-drawer-content"
+               hx-swap="innerHTML"
+               @click="selectedStrike = '{{ row.strike_label }}'; selectedSide = 'put'">
+            
+            <div class="text-left font-bold {% if row.is_atm %}text-amber-400{% else %}text-white{% endif %}">
+              {{ row.strike_label }}
+              <span class="text-[9px] px-1 py-0.2 {% if row.put.is_itm %}bg-rose-900 text-rose-300{% else %}bg-gray-800 text-gray-400{% endif %}">
+                {% if row.is_atm %}ATM{% elif row.put.is_itm %}ITM{% else %}OTM{% endif %}
+              </span>
+            </div>
+            <div class="text-right font-bold text-emerald-400">
+              {% if row.put.bid is not None and row.put.bid > 0 %}{{ row.put.bid|floatformat:0 }}{% else %}—{% endif %}
+            </div>
+            <div class="text-right font-bold text-rose-400">
+              {% if row.put.ask is not None and row.put.ask > 0 %}{{ row.put.ask|floatformat:0 }}{% else %}—{% endif %}
+            </div>
+            <div class="text-right text-amber-300">
+              {% if row.put.iv is not None %}{{ row.put.iv|floatformat:0 }}%{% else %}—{% endif %}
+            </div>
+            <div class="text-right text-gray-300">
+              {% if row.put.delta is not None %}{{ row.put.delta|floatformat:2 }}{% else %}—{% endif %}
+            </div>
+            <div class="text-right text-blue-400">
+              {% if row.put.oi is not None %}{{ row.put.oi|floatformat:0 }}{% else %}—{% endif %}
+            </div>
+          </div>
+        {% empty %}
+          <div class="text-center py-8 text-gray-400 text-xs">No option strikes found.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% if is_htmx %}
+<!-- HTMX Out-of-Band Swaps for Real-Time Header Metrics Synchronization -->
+<div id="desktop-header-metrics" hx-swap-oob="innerHTML" class="hidden md:flex items-center">
+  <div class="flex items-center space-x-6 border-r border-[#1F2937] pr-6">
+    <div>
+      <span class="text-[11px] text-gray-400 uppercase font-semibold">BTC Index</span>
+      <div class="text-sm md:text-base font-bold text-white tracking-tight">
+        {% if index_price > 0 %}${{ index_price|floatformat:1 }}{% else %}—{% endif %}
+      </div>
+    </div>
+    <div>
+      <span class="text-[11px] text-gray-400 uppercase font-semibold">Underlying BTC</span>
+      <div class="text-sm md:text-base font-bold text-cyan-300 tracking-tight">
+        {% if underlying_price > 0 %}${{ underlying_price|floatformat:1 }}{% else %}—{% endif %}
+      </div>
+    </div>
+    <div>
+      <span class="text-[11px] text-gray-400 uppercase font-semibold">Put/Call Ratio</span>
+      <div class="text-sm md:text-base font-bold text-amber-400">
+        {% if matrix.pcr > 0 %}{{ matrix.pcr }}{% else %}—{% endif %}
+      </div>
+    </div>
+    <div>
+      <span class="text-[11px] text-gray-400 uppercase font-semibold">Contracts</span>
+      <div class="text-sm md:text-base font-bold text-gray-300">
+        {{ instruments_count|default:"684" }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mobile-header-metrics" hx-swap-oob="outerHTML" class="lg:hidden bg-[#0D1117] border border-[#1F2937] p-2.5 font-mono-numbers text-xs">
+  <div class="flex items-baseline justify-between">
+    <div class="flex items-baseline space-x-2">
+      <span class="text-base font-bold text-white tracking-tight">
+        {% if index_price > 0 %}${{ index_price|floatformat:1 }}{% else %}—{% endif %}
+      </span>
+      <span class="text-[11px] text-emerald-400 font-semibold">BTC Index</span>
+    </div>
+    <div class="flex items-center space-x-1.5 text-[11px]">
+      <span class="text-gray-400">Und:</span>
+      <span class="text-cyan-300 font-bold">{% if underlying_price > 0 %}${{ underlying_price|floatformat:1 }}{% else %}—{% endif %}</span>
+    </div>
+  </div>
+  <div class="flex items-center justify-between mt-1 text-[11px] text-gray-300 pt-1 border-t border-[#1F2937]/60">
+    <div>PCR: <strong class="text-amber-400">{% if matrix.pcr > 0 %}{{ matrix.pcr }}{% else %}—{% endif %}</strong></div>
+    <div>Call OI: <strong class="text-emerald-400">{{ matrix.total_call_oi|floatformat:0 }}</strong></div>
+    <div>Put OI: <strong class="text-rose-400">{{ matrix.total_put_oi|floatformat:0 }}</strong></div>
+    <div>Contracts: <strong class="text-gray-100">{{ instruments_count|default:"684" }}</strong></div>
+  </div>
+</div>
+
+<div id="desktop-expiry-stats" hx-swap-oob="outerHTML" class="hidden lg:flex items-center space-x-6 text-xs font-mono-numbers text-gray-300 shrink-0 border-l border-[#1F2937] pl-6 bg-[#0D1117]">
+  <div class="flex items-center space-x-1.5">
+    <span class="text-gray-400">Call OI:</span>
+    <strong class="text-emerald-400 text-sm font-bold">{{ matrix.total_call_oi|floatformat:0 }}</strong>
+  </div>
+  <div class="flex items-center space-x-1.5">
+    <span class="text-gray-400">Put OI:</span>
+    <strong class="text-rose-400 text-sm font-bold">{{ matrix.total_put_oi|floatformat:0 }}</strong>
+  </div>
+  <div class="flex items-center space-x-1.5">
+    <span class="text-gray-400">PCR:</span>
+    <strong class="text-amber-400 text-sm font-bold">{% if matrix.pcr > 0 %}{{ matrix.pcr }}{% else %}—{% endif %}</strong>
+  </div>
+</div>
+{% endif %}

@@ -1,0 +1,175 @@
+<!-- Single-Contract Inspector: Ultra-Legible Focused View for the Side Touched -->
+<div class="space-y-3 font-mono-numbers">
+  
+  <!-- Active Contract Header Banner -->
+  <div class="bg-[#0A0E14] border {{ contract.border_class }} p-3 md:p-3.5 flex flex-wrap items-center justify-between gap-2.5">
+    <div class="flex items-center space-x-3">
+      <!-- Side Badge -->
+      <span class="px-2.5 py-1 text-xs md:text-sm {{ contract.badge_class }} font-extrabold uppercase tracking-wider border">
+        {{ contract.side }}
+      </span>
+      <div>
+        <div class="text-sm md:text-base font-bold text-white tracking-tight">
+          {{ contract.symbol }}
+        </div>
+        <div class="text-xs text-gray-300 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>Strike: <strong class="text-white">${{ strike }}</strong></span>
+          <span class="text-gray-500">•</span>
+          <span>Expiry: <strong class="text-cyan-300">{{ contract.parsed.expiry_label }}</strong></span>
+          <span class="text-gray-500">•</span>
+          <span class="{{ contract.accent_text }} font-semibold">{{ moneyness_text }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick 1-Tap Switch to Opposite Side Button -->
+    {% if alt_contract.symbol %}
+    <div>
+      <button hx-get="{% url 'contract_drawer' %}?symbol={{ alt_contract.symbol }}&side={{ alt_contract.type|lower }}&strike={{ strike }}&call={{ call_sym }}&put={{ put_sym }}"
+              hx-target="#contract-drawer-content"
+              hx-swap="innerHTML"
+              class="px-3 py-1.5 text-xs bg-[#131924] hover:bg-[#1A2232] border border-[#1F2937] hover:border-gray-500 text-gray-200 transition-colors flex items-center space-x-1.5 cursor-pointer">
+        <span class="text-cyan-400">⇄</span>
+        <span>View <strong>{{ alt_contract.side }}</strong> Details</span>
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Primary Market Pricing & Liquidity Grid -->
+  <div class="grid grid-cols-2 gap-2">
+    <!-- Best Bid -->
+    <div class="bg-[#131924] border border-[#1F2937] p-2.5">
+      <div class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Best Bid</div>
+      <div class="text-xl font-bold text-emerald-400 mt-0.5">
+        {% if contract.quote.bid is not None and contract.quote.bid > 0 %}
+          ${{ contract.quote.bid|floatformat:0 }}
+        {% else %}
+          <span class="text-gray-600 text-base font-normal">—</span>
+        {% endif %}
+      </div>
+      <div class="text-[11px] text-gray-400 mt-0.5">
+        Size: <strong class="text-gray-200">{{ contract.quote.bid_size|default:"0" }} BTC</strong>
+      </div>
+    </div>
+
+    <!-- Best Ask -->
+    <div class="bg-[#131924] border border-[#1F2937] p-2.5">
+      <div class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Best Ask</div>
+      <div class="text-xl font-bold text-rose-400 mt-0.5">
+        {% if contract.quote.ask is not None and contract.quote.ask > 0 %}
+          ${{ contract.quote.ask|floatformat:0 }}
+        {% else %}
+          <span class="text-gray-600 text-base font-normal">—</span>
+        {% endif %}
+      </div>
+      <div class="text-[11px] text-gray-400 mt-0.5">
+        Size: <strong class="text-gray-200">{{ contract.quote.ask_size|default:"0" }} BTC</strong>
+      </div>
+    </div>
+
+    <!-- Spread & Last Traded & Mark -->
+    <div class="col-span-2 bg-[#131924] border border-[#1F2937] p-2.5 flex items-center justify-between text-xs">
+      <div>
+        <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Spread: </span>
+        {% if spread_val is not None %}
+          <strong class="text-white">${{ spread_val|floatformat:0 }}</strong>
+          <span class="text-[11px] text-gray-400">({{ spread_pct|floatformat:1 }}%)</span>
+        {% else %}
+          <span class="text-gray-500">—</span>
+        {% endif %}
+      </div>
+      <div>
+        <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Last: </span>
+        <strong class="text-cyan-300">{% if contract.quote.last is not None %}${{ contract.quote.last|floatformat:0 }}{% else %}—{% endif %}</strong>
+      </div>
+      <div>
+        <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Mark: </span>
+        <strong class="text-gray-200">{% if contract.quote.mark is not None %}${{ contract.quote.mark|floatformat:1 }}{% else %}—{% endif %}</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Greeks Bento Grid (2x2 Grid) -->
+  <div class="bg-[#0A0E14] border border-[#1F2937] p-2.5">
+    <div class="text-[11px] text-cyan-400 font-bold uppercase tracking-wider mb-1.5">Option Greeks (First & Second Order)</div>
+    <div class="grid grid-cols-2 gap-2 text-xs">
+      <!-- Delta -->
+      <div class="bg-[#131924] p-2 border border-[#1F2937]">
+        <div class="text-[10px] text-gray-400 uppercase font-semibold">Delta (Δ)</div>
+        <div class="text-base font-bold text-white mt-0.5">
+          {{ contract.quote.delta|floatformat:3|default:"—" }}
+        </div>
+        <div class="text-[9px] text-gray-500 mt-0.5">Spot Price Delta</div>
+      </div>
+
+      <!-- Gamma -->
+      <div class="bg-[#131924] p-2 border border-[#1F2937]">
+        <div class="text-[10px] text-gray-400 uppercase font-semibold">Gamma (Γ)</div>
+        <div class="text-base font-bold text-gray-200 mt-0.5">
+          {{ contract.quote.gamma|floatformat:5|default:"—" }}
+        </div>
+        <div class="text-[9px] text-gray-500 mt-0.5">Delta Curvature</div>
+      </div>
+
+      <!-- Theta -->
+      <div class="bg-[#131924] p-2 border border-[#1F2937]">
+        <div class="text-[10px] text-gray-400 uppercase font-semibold">Theta (θ)</div>
+        <div class="text-base font-bold text-rose-400 mt-0.5">
+          {% if contract.quote.theta is not None %}{{ contract.quote.theta|floatformat:1 }}/d{% else %}—{% endif %}
+        </div>
+        <div class="text-[9px] text-gray-500 mt-0.5">Daily Time Decay</div>
+      </div>
+
+      <!-- Vega -->
+      <div class="bg-[#131924] p-2 border border-[#1F2937]">
+        <div class="text-[10px] text-gray-400 uppercase font-semibold">Vega (ν)</div>
+        <div class="text-base font-bold text-cyan-300 mt-0.5">
+          {{ contract.quote.vega|floatformat:2|default:"—" }}
+        </div>
+        <div class="text-[9px] text-gray-500 mt-0.5">IV Sensitivity</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Volatility & Liquidity Details -->
+  <div class="grid grid-cols-2 gap-2 text-xs">
+    <!-- Implied Volatility -->
+    <div class="bg-[#131924] border border-[#1F2937] p-2 flex items-center justify-between">
+      <div>
+        <div class="text-[10px] text-gray-400 uppercase font-semibold">Implied Vol (IV)</div>
+        <div class="text-sm font-bold text-amber-300 mt-0.5">
+          {% if contract.quote.iv is not None %}{{ contract.quote.iv|floatformat:1 }}%{% else %}—{% endif %}
+        </div>
+      </div>
+      <div class="text-amber-400 text-base">📈</div>
+    </div>
+
+    <!-- Open Interest -->
+    <div class="bg-[#131924] border border-[#1F2937] p-2 flex items-center justify-between">
+      <div>
+        <div class="text-[10px] text-gray-400 uppercase font-semibold">Open Interest</div>
+        <div class="text-sm font-bold text-blue-400 mt-0.5">
+          {{ contract.quote.oi|floatformat:1|default:"0" }} BTC
+        </div>
+      </div>
+      <div class="text-blue-400 text-base">📊</div>
+    </div>
+  </div>
+
+  <!-- Trade Replication Simulator Preview -->
+  <div class="bg-[#131924] border border-amber-500/30 p-2.5 flex flex-col space-y-1.5 text-xs">
+    <div class="flex items-center space-x-1.5">
+      <span class="text-amber-400 text-sm">⚡</span>
+      <span class="text-white font-semibold">Trade Mirror Simulation</span>
+      <span class="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 font-bold uppercase ml-auto">Unwired</span>
+    </div>
+    <div class="text-[11px] text-gray-400">
+      Replication for {{ contract.side }} ${{ strike }} will size proportionally across connected follower accounts.
+    </div>
+    <div class="pt-1 border-t border-[#1F2937]/50 flex justify-end">
+      <a href="{% url 'replication_overview' %}" class="btn-terminal text-xs">Configure Followers ↗</a>
+    </div>
+  </div>
+
+</div>
