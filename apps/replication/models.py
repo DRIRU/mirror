@@ -9,7 +9,7 @@ from django.utils import timezone
 
 class MasterAccount(models.Model):
     label = models.CharField(max_length=64, default="Master Trader")
-    api_key = models.CharField(max_length=128, help_text="CoinSwitch PRO Master API Key")
+    api_key = models.CharField(max_length=128, help_text="Master Account API Key")
     api_secret = models.CharField(max_length=128, help_text="Hex-encoded Ed25519 Secret Key")
     base_currency = models.CharField(max_length=16, default="USDT")
     is_active = models.BooleanField(default=True)

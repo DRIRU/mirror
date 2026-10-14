@@ -1,5 +1,5 @@
 """
-Django settings for mirror project (CoinSwitch PRO Options Terminal & Trade Mirror).
+Django settings for Mirror (Institutional Options Terminal & Trade Replication Engine).
 """
 
 from pathlib import Path

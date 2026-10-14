@@ -1,5 +1,5 @@
 """
-Market Data Views for the CoinSwitch PRO Options Terminal.
+Market Data Views for Mirror Institutional Options Terminal.
 """
 
 from datetime import datetime, timezone
