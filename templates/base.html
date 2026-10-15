@@ -56,6 +56,10 @@
           <span>Trade Mirror</span>
           <span class="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 rounded-sm">Unwired</span>
         </a>
+        <a href="{% url 'follower_accounts_list' %}" class="px-2 py-1 {% if request.resolver_match.url_name == 'follower_accounts_list' %}text-[#06B6D4] font-semibold border-b-2 border-[#06B6D4]{% else %}text-[#94A3B8] hover:text-white{% endif %} flex items-center space-x-1.5">
+          <span>Friends' Accounts</span>
+          <span class="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-1 rounded-sm font-mono-numbers">🔒 AES</span>
+        </a>
         <a href="/admin/" target="_blank" class="px-2 py-1 text-[#94A3B8] hover:text-white flex items-center space-x-1">
           <span>Admin</span>
           <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
@@ -101,7 +105,13 @@
       <span>Mirror</span>
       <span class="absolute -top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400"></span>
     </a>
-    <!-- Tab 3: Admin -->
+    <!-- Tab 3: Friends' Accounts -->
+    <a href="{% url 'follower_accounts_list' %}" class="flex flex-col items-center justify-center py-1 relative {% if request.resolver_match.url_name == 'follower_accounts_list' %}text-[#06B6D4] font-bold{% else %}text-gray-400 hover:text-white{% endif %}">
+      <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      <span>Friends</span>
+      <span class="absolute -top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+    </a>
+    <!-- Tab 4: Admin -->
     <a href="/admin/" target="_blank" class="flex flex-col items-center justify-center py-1 text-gray-400 hover:text-white">
       <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
       <span>Admin</span>

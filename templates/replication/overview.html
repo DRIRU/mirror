@@ -48,7 +48,8 @@
       <div class="bg-[#131924] p-3 border border-[#1F2937] space-y-1.5 text-xs font-mono-numbers">
         <div class="flex justify-between"><span class="text-gray-400">Label:</span> <span class="text-white font-bold">{{ master.label }}</span></div>
         <div class="flex justify-between"><span class="text-gray-400">Currency:</span> <span class="text-gray-200">{{ master.base_currency }}</span></div>
-        <div class="flex justify-between"><span class="text-gray-400">Key:</span> <span class="text-gray-400">{{ master.api_key|truncatechars:16 }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">Key:</span> <span class="text-cyan-400 font-mono-numbers">{{ master.masked_api_key }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">Secret:</span> <span class="text-emerald-400 font-mono-numbers">🔒 {{ master.masked_secret }}</span></div>
         <div class="flex justify-between"><span class="text-gray-400">Followers:</span> <span class="text-emerald-400 font-bold">{{ master.followers.count }}</span></div>
       </div>
       {% empty %}
@@ -65,15 +66,25 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
           <h3 class="text-xs font-bold text-white uppercase">Follower Accounts (Max 3)</h3>
         </div>
-        <a href="/admin/replication/followeraccount/" target="_blank" class="text-[10px] text-cyan-400 hover:underline">Add Follower ↗</a>
+        <a href="{% url 'follower_accounts_list' %}" class="text-[10px] text-cyan-400 hover:text-cyan-300 hover:underline font-bold flex items-center space-x-1">
+          <span>Manage & Add Friends 🔒</span>
+          <span>&rarr;</span>
+        </a>
       </div>
       <div class="space-y-2">
         {% for master in masters %}
           {% for follower in master.followers.all %}
           <div class="bg-[#131924] p-2.5 border border-[#1F2937] flex items-center justify-between text-xs font-mono-numbers">
             <div>
-              <div class="text-white font-bold">{{ follower.name }}</div>
-              <div class="text-[10px] text-gray-400">Ratio: {{ follower.allocation_ratio }}x · Max Cap: {{ follower.max_contract_qty }}</div>
+              <div class="flex items-center space-x-2">
+                <span class="text-white font-bold">{{ follower.name }}</span>
+                {% if follower.is_active %}
+                  <span class="text-[9px] text-emerald-400 bg-emerald-950/40 border border-emerald-900 px-1 rounded-sm">ACTIVE</span>
+                {% else %}
+                  <span class="text-[9px] text-amber-400 bg-amber-950/40 border border-amber-900 px-1 rounded-sm">PAUSED</span>
+                {% endif %}
+              </div>
+              <div class="text-[10px] text-gray-400 mt-0.5">Ratio: {{ follower.allocation_ratio }}x · Key: {{ follower.masked_api_key }}</div>
             </div>
             <div class="text-right">
               <div class="text-emerald-400 font-bold">${{ follower.equity_balance }}</div>
@@ -82,7 +93,7 @@
           </div>
           {% empty %}
           <div class="text-xs text-gray-500 py-4 text-center">
-            No follower accounts added yet.
+            No follower accounts added yet. <a href="{% url 'follower_accounts_list' %}" class="text-cyan-400 underline ml-1 font-bold">+ Add Friend Account &rarr;</a>
           </div>
           {% endfor %}
         {% endfor %}

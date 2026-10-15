@@ -69,6 +69,12 @@ $$\text{Follower Qty} = \text{Master Qty} \times \left(\frac{\text{Follower Equi
 - **Safety Bounds**: Enforces step rounding (`qtyStep: 0.01 BTC`) and individual maximum contract caps (`max_contract_qty`).
 - **Simulated Execution**: Replications are audited and logged in the database without sending live order payloads to the exchange.
 
+### 4. Friend Accounts & Credential Security Architecture
+- **Authenticated Symmetric Encryption at Rest**: API secrets are encrypted prior to database persistence using authenticated AES-128-CBC with HMAC-SHA256 (`Fernet`), derived deterministically or via `MIRROR_ENCRYPTION_KEY`.
+- **Zero-Knowledge / Write-Only Display**: Secrets are strictly write-only and displayed with masked representations (`••••••••••••••••7f8d`), preventing credential exfiltration or shoulder surfing.
+- **Real-Time Key Syntax Diagnostics**: HTMX pre-flight feedback validates Ed25519 64-character hex signatures and API tokens with live entropy evaluation without sending raw secrets over untrusted channels.
+- **Dedicated Friends Management UI**: Accessible at `/replication/accounts/` with one-click HTMX status toggles, inline risk editing, and tamper-evident audit logging.
+
 ---
 
 ## 🚀 Quickstart Guide
@@ -178,3 +184,4 @@ mirror/
 ## 📜 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
+

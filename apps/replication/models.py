@@ -5,26 +5,43 @@ Stores Master accounts, Follower accounts, Sizing parameters, and Audit Logs.
 
 from django.db import models
 from django.utils import timezone
+from .security import encrypt_secret, decrypt_secret, mask_api_key, mask_api_secret, ENCRYPTION_PREFIX
 
 
 class MasterAccount(models.Model):
     label = models.CharField(max_length=64, default="Master Trader")
     api_key = models.CharField(max_length=128, help_text="Master Account API Key")
-    api_secret = models.CharField(max_length=128, help_text="Hex-encoded Ed25519 Secret Key")
+    api_secret = models.TextField(help_text="Encrypted Secret Key (AES-256/Fernet)")
     base_currency = models.CharField(max_length=16, default="USDT")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def masked_api_key(self) -> str:
+        return mask_api_key(self.api_key)
+
+    @property
+    def masked_secret(self) -> str:
+        return mask_api_secret(self.api_secret)
+
+    def get_decrypted_secret(self) -> str:
+        return decrypt_secret(self.api_secret)
+
+    def save(self, *args, **kwargs):
+        if self.api_secret and not self.api_secret.startswith(ENCRYPTION_PREFIX):
+            self.api_secret = encrypt_secret(self.api_secret)
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.label} ({self.api_key[:8]}...)"
+        return f"{self.label} ({self.masked_api_key})"
 
 
 class FollowerAccount(models.Model):
     master = models.ForeignKey(MasterAccount, on_delete=models.CASCADE, related_name="followers")
     name = models.CharField(max_length=64, help_text="Friend/Account Identifier")
     api_key = models.CharField(max_length=128, help_text="Follower API Key")
-    api_secret = models.CharField(max_length=128, help_text="Follower Ed25519 Secret Key")
+    api_secret = models.TextField(help_text="Encrypted Secret Key (AES-256/Fernet)")
     
     # Capital Allocation & Sizing
     equity_balance = models.DecimalField(max_digits=12, decimal_places=2, default=1000.00, help_text="Allocated trading equity (USDT)")
@@ -35,6 +52,22 @@ class FollowerAccount(models.Model):
     is_active = models.BooleanField(default=True, help_text="Enable/disable replication for this follower")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def masked_api_key(self) -> str:
+        return mask_api_key(self.api_key)
+
+    @property
+    def masked_secret(self) -> str:
+        return mask_api_secret(self.api_secret)
+
+    def get_decrypted_secret(self) -> str:
+        return decrypt_secret(self.api_secret)
+
+    def save(self, *args, **kwargs):
+        if self.api_secret and not self.api_secret.startswith(ENCRYPTION_PREFIX):
+            self.api_secret = encrypt_secret(self.api_secret)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name} [Eq: ${self.equity_balance}]"

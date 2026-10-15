@@ -1,0 +1,9 @@
+<button 
+  hx-post="{% url 'follower_account_toggle' follower.id %}" 
+  hx-swap="outerHTML"
+  class="group inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-mono-numbers transition-colors {% if follower.is_active %}bg-emerald-950/40 text-emerald-400 border border-emerald-800/80 hover:bg-emerald-900/60{% else %}bg-amber-950/40 text-amber-400 border border-amber-800/80 hover:bg-amber-900/60{% endif %}"
+  title="Click to toggle Active/Paused state">
+  <span class="w-1.5 h-1.5 rounded-full {% if follower.is_active %}bg-emerald-400 animate-pulse{% else %}bg-amber-400{% endif %}"></span>
+  <span class="font-bold">{% if follower.is_active %}ACTIVE{% else %}PAUSED{% endif %}</span>
+  <span class="text-[9px] text-gray-500 group-hover:text-gray-300 ml-1">⇄</span>
+</button>
